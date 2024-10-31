@@ -1,0 +1,63 @@
+{{- if .Values.connect.ingress.enabled -}}
+{{- $hostname := .Values.connect.ingress.hostname  -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "chart.connect.fullname" . }}
+  namespace: {{ include  "chart.namespace" . }}
+  labels:
+    {{- include "chart.labels" (dict "context" . "component" .Values.connect.name "name" .Values.connect.name) | nindent 4 }}
+    {{- with .Values.connect.ingress.labels }}
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.connect.ingress.annotations }}
+  annotations:
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+spec:
+  {{- with .Values.connect.ingress.ingressClassName }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.connect.ingress.hostname | default $hostname }}
+      http:
+        paths:
+          {{- with .Values.connect.ingress.extraPaths }}
+            {{- tpl (toYaml .) $ | nindent 10 }}
+          {{- end }}
+          - path: {{ .Values.connect.ingress.path }}
+            pathType: {{ .Values.connect.ingress.pathType }}
+            backend:
+              service:
+                name: {{ include "chart.connect.fullname" . }}
+                port:
+                  number: {{ .Values.connect.service.http }}
+    {{- range .Values.connect.ingress.extraHosts }}
+    - host: {{ .name | quote }}
+      http:
+        paths:
+          - path: {{ default $.Values.connect.ingress.path .path }}
+            pathType: {{ default $.Values.connect.ingress.pathType .pathType }}
+            backend:
+              service:
+                name: {{ include "chart.connect.fullname" $ }}
+                port:
+                  number: {{ $.Values.connect.service.http }}
+    {{- end }}
+    {{- with .Values.connect.ingress.extraRules }}
+      {{- tpl (toYaml .) $ | nindent 4 }}
+    {{- end }}
+  {{- if or .Values.connect.ingress.tls .Values.connect.ingress.extraTls }}
+  tls:
+    {{- if .Values.connect.ingress.tls }}
+    - hosts:
+      - {{ .Values.connect.ingress.hostname | default $hostname }}
+      secretName: connect-tls
+    {{- end }}
+    {{- with .Values.connect.ingress.extraTls }}
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+{{- end }}

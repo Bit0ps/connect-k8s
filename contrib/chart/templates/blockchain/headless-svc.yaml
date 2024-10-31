@@ -1,0 +1,52 @@
+{{- if .Values.blockchain.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+{{- if .Values.blockchain.service.annotations }}
+  annotations:
+  {{- range $key, $value := .Values.blockchain.service.annotations }}
+    {{ $key }}: {{ $value | quote }}
+  {{- end }}
+{{- end }}
+  name: {{ template "chart.blockchain.fullname" . }}-headless
+  namespace: {{ include  "chart.namespace" . }}
+  labels:
+    {{- include "chart.labels" (dict "context" . "component" .Values.blockchain.name "name" .Values.blockchain.name) | nindent 4 }}
+{{- with .Values.applicationSet.service.labels }}
+{{- toYaml . | nindent 4 }}
+{{- end }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: p2p
+      port: 26656
+      targetPort: 26656
+      protocol: TCP
+    - name: rpc
+      port: 26657
+      targetPort: 26657
+      protocol: TCP
+    - name: prometheus
+      port: 26660
+      targetPort: 26660
+      protocol: TCP
+    - name: api
+      port: 1317
+      targetPort: 1317
+      protocol: TCP
+    - name: grpc
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+    - name: grpc-web
+      port: 7171
+      targetPort: 7171
+      protocol: TCP
+    - name: abci
+      port: 26655
+      targetPort: 26655
+      protocol: TCP
+  selector:
+    {{- include "chart.selectorLabels" (dict "context" . "name" .Values.blockchain.name) | nindent 4 }}
+{{- end }}

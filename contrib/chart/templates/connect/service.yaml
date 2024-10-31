@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "chart.connect.fullname" . }}
+  namespace: {{ include  "chart.namespace" . }}
+  labels:
+    {{- include "chart.labels" (dict "context" . "component" .Values.connect.name "name" .Values.connect.name) | nindent 4 }}
+  {{- with .Values.connect.service.labels }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- if .Values.connect.service.annotations }}
+  annotations:
+{{- range $key, $value := .Values.connect.service.annotations }}
+    {{ $key }}: {{ $value | quote }}
+  {{- end }}
+{{- end }}
+spec:
+  type: {{ .Values.connect.service.type }}
+  {{- with .Values.connect.service.externalIPs }}
+  externalIPs: {{ . }}
+  {{- end }}
+  {{- if or (eq .Values.connect.service.type "LoadBalancer") (eq .Values.connect.service.type "NodePort") }}
+  externalTrafficPolicy: {{ .Values.connect.service.externalTrafficPolicy }}
+  {{- end }}
+  {{- if eq .Values.connect.service.type "LoadBalancer" }}
+  {{- with .Values.connect.service.loadBalancerClass }}
+  loadBalancerClass: {{ . }}
+  {{- end }}
+  {{- with .Values.connect.service.loadBalancerIP }}
+  loadBalancerIP: {{ . }}
+  {{- end }}
+  {{- with .Values.connect.service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  sessionAffinity: {{ .Values.connect.service.sessionAffinity }}
+  ports:
+  - name: {{ .Values.connect.service.portHttpName }}
+    protocol: TCP
+    port: {{ .Values.connect.service.http }}
+    targetPort: {{ .Values.connect.settings.port }}
+    {{- if eq .Values.connect.service.type "NodePort" }}
+    nodePort: {{ .Values.connect.service.nodePortHttp }}
+    {{- end }}
+{{- if .Values.connect.settings.runPprof }}
+  - name: {{ .Values.connect.service.portPprofName }}
+    protocol: TCP
+    port: {{ .Values.connect.service.pprof }}
+    targetPort: {{ .Values.connect.settings.pprofPort }}
+{{- end }}
+  selector:
+    {{- include "chart.selectorLabels" (dict "context" . "name" .Values.connect.name) | nindent 4 }}

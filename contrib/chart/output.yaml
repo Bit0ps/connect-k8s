@@ -1,0 +1,239 @@
+---
+# Source: skip/templates/connect/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: skip-sidecar
+  namespace: default
+  labels:
+    helm.sh/chart: skip-1.0.0
+    app.kubernetes.io/name: skip-sidecar
+    app.kubernetes.io/instance: skip
+    app.kubernetes.io/component: sidecar
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: skip
+    app.kubernetes.io/version: "2.1.0"
+automountServiceAccountToken: true
+---
+# Source: skip/templates/connect/oracle-json-cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oracle-json
+  namespace: default
+  labels:
+    helm.sh/chart: skip-1.0.0
+    app.kubernetes.io/name: skip-sidecar
+    app.kubernetes.io/instance: skip
+    app.kubernetes.io/component: sidecar
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: skip
+    app.kubernetes.io/version: "2.1.0"
+data:
+  oracle.json: |
+    {
+      "providers": {
+        "dydx_api": {
+          "api": {
+            "endpoints": [
+              {
+                "url": "https://dydx-api.polkachu.com"
+              },
+              {
+                 "url": "dydx-grpc.polkachu.com:23890"
+              }
+            ]
+          }
+        }
+      }
+    }
+---
+# Source: skip/templates/connect/metrics.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: skip-sidecar-metrics
+  namespace: default
+  labels:
+    helm.sh/chart: skip-1.0.0
+    app.kubernetes.io/name: skip-sidecar
+    app.kubernetes.io/instance: skip
+    app.kubernetes.io/component: sidecar
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: skip
+    app.kubernetes.io/version: "2.1.0"
+spec:
+  type: ClusterIP
+  ports:
+  - name:  http-metrics
+    protocol: TCP
+    port: 8002
+    targetPort: http-metrics
+  selector:
+    app.kubernetes.io/name: skip-sidecar
+    app.kubernetes.io/instance: skip
+---
+# Source: skip/templates/connect/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: skip-sidecar
+  namespace: default
+  labels:
+    helm.sh/chart: skip-1.0.0
+    app.kubernetes.io/name: skip-sidecar
+    app.kubernetes.io/instance: skip
+    app.kubernetes.io/component: sidecar
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: skip
+    app.kubernetes.io/version: "2.1.0"
+spec:
+  type: ClusterIP
+  sessionAffinity: None
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
+  - name: pprof
+    protocol: TCP
+    port: 6060
+    targetPort: 6060
+  selector:
+    app.kubernetes.io/name: skip-sidecar
+    app.kubernetes.io/instance: skip
+---
+# Source: skip/templates/connect/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skip-sidecar
+  namespace: default
+  labels:
+    helm.sh/chart: skip-1.0.0
+    app.kubernetes.io/name: skip-sidecar
+    app.kubernetes.io/instance: skip
+    app.kubernetes.io/component: sidecar
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: skip
+    app.kubernetes.io/version: "2.1.0"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: skip-sidecar
+      app.kubernetes.io/instance: skip
+  template:
+    metadata:
+      annotations:
+        rollme: "jUCX3"
+      labels:
+        helm.sh/chart: skip-1.0.0
+        app.kubernetes.io/name: skip-sidecar
+        app.kubernetes.io/instance: skip
+        app.kubernetes.io/component: sidecar
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/part-of: skip
+        app.kubernetes.io/version: "2.1.0"
+    spec:
+      serviceAccountName: skip-sidecar
+      automountServiceAccountToken: true
+      securityContext:
+        {}
+      containers:
+        - name: skip
+          securityContext:
+            {}
+          image: "connect:2.1.0"
+          imagePullPolicy: Never
+          env:
+            - name: CONNECT_CONFIG_HOST
+              value: "0.0.0.0"
+            - name: CONNECT_CONFIG_PORT
+              value: "8080"
+            - name: CONNECT_CONFIG_METRICS_ENABLED
+              value: "true"
+            - name: CONNECT_CONFIG_METRICS_PROMETHEUSSERVERADDRESS
+              value: "0.0.0.0:8002"
+            - name: MARKETMAP_PROVIDER
+              value: "dydx_api"
+            - name: MARKETMAP_ENDPOINT
+              value: "neutron-api.polkachu.com:443"
+            - name: RUN_PPROF
+              value: "true"
+            - name: PPROF_PORT
+              value: "6060"
+            - name: METRICS_ENABLED
+              value: "true"
+            - name: METRICS_PROMETHEUS_ADDRESS
+              value: "0.0.0.0:8002"
+            - name: LOG_DISABLE_FILE_ROTATION
+              value: "false"
+            - name: LOG_FILE_DISABLE_COMPRESSION
+              value: "false"
+            - name: ORACLE_CONFIG
+              value: "/etc/config/oracle.json"
+            - name: LOG_STDOUT_LEVEL
+              value: "info"
+            - name: LOG_FILE_LEVEL
+              value: "info"
+            - name: LOG_FILE
+              value: "sidecar.log"
+            - name: LOG_MAX_SIZE
+              value: "100"
+            - name: LOG_MAX_BACKUPS
+              value: "1"
+            - name: LOG_MAX_AGE
+              value: "3"
+            - name: MODE
+              value: "exec"
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: "8080"
+            - name: UPDATE_INTERVAL
+              value: "250000000"
+            - name: MAX_PRICE_AGE
+              value: "2m0s"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: pprof
+              containerPort: 6060
+              protocol: TCP
+            - name: http-metrics
+              containerPort: 8002
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /connect/oracle/v2/prices
+              port: oracle
+            initialDelaySeconds: 15
+            periodSeconds: 6
+            timeoutSeconds: 2
+            failureThreshold: 3
+            successThreshold: 1
+          readinessProbe:
+            httpGet:
+              path: /connect/oracle/v2/prices
+              port: oracle
+            initialDelaySeconds: 15
+            periodSeconds: 6
+            timeoutSeconds: 2
+            failureThreshold: 3
+            successThreshold: 1
+          resources:
+            limits:
+              cpu: 1
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          volumeMounts:
+            - name: oracle-json
+              mountPath: /etc/config
+      volumes:
+        - name: oracle-json
+          configMap:
+            name: oracle-json

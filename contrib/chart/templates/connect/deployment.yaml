@@ -1,0 +1,192 @@
+{{- $metricsAddress := .Values.connect.settings.metricsPrometheusAddress }}
+{{- $metricsPort := regexFind "[0-9]+$" $metricsAddress }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  {{- with (mergeOverwrite (deepCopy .Values.global.deploymentAnnotations) .Values.connect.deploymentAnnotations) }}
+  annotations:
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+  name: {{ template "chart.connect.fullname" . }}
+  namespace: {{ include  "chart.namespace" . }}
+  labels:
+    {{- include "chart.labels" (dict "context" . "component" .Values.connect.name "name" .Values.connect.name) | nindent 4 }}
+spec:
+  {{- with include "chart.strategy" (mergeOverwrite (deepCopy .Values.global.deploymentStrategy) .Values.connect.deploymentStrategy) }}
+  strategy:
+    {{- trim . | nindent 4 }}
+  {{- end }}
+  {{- if not .Values.connect.autoscaling.enabled }}
+  replicas: {{ .Values.connect.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" (dict "context" . "name" .Values.connect.name) | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        rollme: {{ randAlphaNum 5 | quote }}
+        {{- with (mergeOverwrite (deepCopy .Values.global.podAnnotations) .Values.connect.podAnnotations) }}
+        {{- range $key, $value := . }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+      labels:
+        {{- include "chart.labels" (dict "context" . "component" .Values.connect.name "name" .Values.connect.name) | nindent 8 }}
+        {{- with (mergeOverwrite (deepCopy .Values.global.podLabels) .Values.connect.podLabels) }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.connect.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "chart.connect.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.connect.automountServiceAccountToken }}
+      securityContext:
+        {{- toYaml .Values.connect.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.connect.securityContext | nindent 12 }}
+          image: "{{ .Values.connect.image.repository }}:{{ .Values.connect.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.connect.image.pullPolicy }}
+          env:
+            - name: CONNECT_CONFIG_HOST
+              value: {{ .Values.connect.settings.host | default "0.0.0.0" | quote }}
+            - name: CONNECT_CONFIG_PORT
+              value: {{ .Values.connect.settings.port | default "8080" | quote }}
+            - name: CONNECT_CONFIG_METRICS_ENABLED
+              value: {{ .Values.connect.settings.metricsEnabled | default "true" | quote }}
+            - name: CONNECT_CONFIG_METRICS_PROMETHEUSSERVERADDRESS
+              value: {{ .Values.connect.settings.metricsPrometheusAddress | default "0.0.0.0:8002" | quote }}
+            - name: MARKETMAP_PROVIDER
+              value: {{ .Values.connect.settings.marketMapProvider | default "marketmap_api" | quote }}
+          {{- if eq "marketmap_api" .Values.connect.settings.marketMapProvider }}
+            - name: MARKETMAP_ENDPOINT
+              value: "neutron-api.polkachu.com:443"
+          {{- else if eq "dydx_api" .Values.connect.settings.marketMapProvider }}
+            - name: MARKETMAP_ENDPOINT
+              value: "neutron-api.polkachu.com:443"
+          {{- else -}}
+            - name: MARKETMAP_ENDPOINT
+              value: ""
+          {{- end }}
+            - name: RUN_PPROF
+              value: {{ .Values.connect.settings.runPprof | default "false" | quote }}
+          {{- if .Values.connect.settings.runPprof }}
+            - name: PPROF_PORT
+              value: {{ .Values.connect.settings.pprofPort | default "6060" | quote }}
+          {{- end }}
+            - name: METRICS_ENABLED
+              value: {{ .Values.connect.settings.metricsEnabled | default "false" | quote }}
+          {{- if .Values.connect.settings.metricsEnabled }}
+            - name: METRICS_PROMETHEUS_ADDRESS
+              value: {{ .Values.connect.settings.metricsPrometheusAddress | default "0.0.0.0:8002" | quote }}
+          {{- end }}
+            - name: LOG_DISABLE_FILE_ROTATION
+              value: {{ .Values.connect.settings.logDisableFileRotation | default "false" | quote }}
+            - name: LOG_FILE_DISABLE_COMPRESSION
+              value: {{ .Values.connect.settings.logFileDisableCompression | default "false" | quote }}
+          {{- if .Values.connect.settings.oracleConfig }}
+            - name: ORACLE_CONFIG
+              value: {{ .Values.connect.settings.oracleConfig | default "" | quote }}
+          {{- end }}
+            - name: LOG_STDOUT_LEVEL
+              value: {{ .Values.connect.settings.logStdOutLevel | default "info" | quote }}
+            - name: LOG_FILE_LEVEL
+              value: {{ .Values.connect.settings.logFileLevel | default "info" | quote }}
+            - name: LOG_FILE
+              value: {{ .Values.connect.settings.logFile | default "sidecar.log" | quote }}
+            - name: LOG_MAX_SIZE
+              value: {{ .Values.connect.settings.logMaxSize | default "100" | quote }}
+            - name: LOG_MAX_BACKUPS
+              value: {{ .Values.connect.settings.logMaxBackups | default "1" | quote }}
+            - name: LOG_MAX_AGE
+              value: {{ .Values.connect.settings.logMaxAge | default "3" | quote }}
+            - name: MODE
+              value: {{ .Values.connect.settings.mode | default "exec" | quote }}
+            - name: HOST
+              value: {{ .Values.connect.settings.host | default "0.0.0.0" | quote }}
+            - name: PORT
+              value: {{ .Values.connect.settings.port | default "8080" | quote }}
+            - name: UPDATE_INTERVAL
+              value: {{ .Values.connect.settings.updateInterval | default "250000000" | quote }}
+            - name: MAX_PRICE_AGE
+              value: {{ .Values.connect.settings.maxPriceAge | default "2m0s" | quote }}
+          {{- if or (.Values.connect.extraEnvVars.normal) (.Values.connect.extraEnvVars.secret) }}
+            {{- include "chart.connect.listEnvVars" . | indent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.connect.settings.port }}
+              protocol: TCP
+          {{- if .Values.connect.settings.runPprof }}
+            - name: pprof
+              containerPort: {{ .Values.connect.settings.pprofPort }}
+              protocol: TCP
+          {{- end }}
+          {{- if .Values.connect.settings.metricsEnabled }}
+            - name: http-metrics
+              containerPort: {{ $metricsPort }}
+              protocol: TCP
+          {{- end }}
+          {{- if .Values.connect.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+            {{- if semverCompare "<2.0.0" .Chart.AppVersion }}
+              path: {{ .Values.connect.livenessProbe.path | default "/slinky/oracle/v1/prices" }}
+            {{- else }}
+              path: {{ .Values.connect.livenessProbe.path | default "/connect/oracle/v2/prices" }}
+            {{- end }}
+              port: oracle
+            initialDelaySeconds: {{ .Values.connect.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.connect.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.connect.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.connect.livenessProbe.failureThreshold }}
+            successThreshold: {{ .Values.connect.livenessProbe.successThreshold }}
+          {{- end }}
+          {{- if .Values.connect.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+            {{- if semverCompare "<2.0.0" .Chart.AppVersion }}
+              path: {{ .Values.connect.livenessProbe.path | default "/slinky/oracle/v1/prices" }}
+            {{- else }}
+              path: {{ .Values.connect.livenessProbe.path | default "/connect/oracle/v2/prices" }}
+            {{- end }}
+              port: oracle
+            initialDelaySeconds: {{ .Values.connect.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.connect.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.connect.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.connect.readinessProbe.failureThreshold }}
+            successThreshold: {{ .Values.connect.readinessProbe.successThreshold }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.connect.resources | nindent 12 }}
+          volumeMounts:
+            - name: oracle-json
+              mountPath: /etc/config
+          {{- with .Values.connect.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: oracle-json
+          configMap:
+            name: oracle-json
+      {{- with .Values.connect.volumes }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.connect.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.connect.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.connect.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

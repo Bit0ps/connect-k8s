@@ -1,0 +1,483 @@
+
+# Provide a name in place of `skip`
+nameOverride: skip
+# String to fully override `"chart.fullname"`
+fullnameOverride: ""
+# Override the namespace
+# @default -- `.Release.Namespace`
+namespaceOverride: ""
+# Override the Kubernetes version, which is used to evaluate certain manifests
+kubeVersionOverride: ""
+# Override APIVersions
+# If you want to template helm charts but cannot access k8s API server
+# you can set api versions here
+apiVersionOverrides: {}
+
+## Globally shared configuration
+global:
+  # Common labels for the all resources
+  additionalLabels: {}
+    # app: skip
+
+  # Number of old deployment ReplicaSets to retain. The rest will be garbage collected.
+  revisionHistoryLimit: 3
+
+  # Default image used by all components
+  image:
+    # If defined, a repository applied to all Skip deployments
+    repository: quay.io/skip/connect
+    # Overrides the global Connect image tag whose default is the chart appVersion
+    tag: ""
+    # If defined, a imagePullPolicy applied to all Skip deployments
+    imagePullPolicy: IfNotPresent
+
+  # Secrets with credentials to pull images from a private registry
+  imagePullSecrets: []
+
+  # Annotations for the all deployed Statefulsets
+  statefulsetAnnotations: {}
+
+  # Annotations for the all deployed Deployments
+  deploymentAnnotations: {}
+
+  # Annotations for the all deployed pods
+  podAnnotations: {}
+
+  # Labels for the all deployed pods
+  podLabels: {}
+
+  # Add Prometheus scrape annotations to all metrics services. This can be used as an alternative to the ServiceMonitors.
+  addPrometheusAnnotations: false
+
+  # Toggle and define pod-level security context.
+  # @default -- `{}` (See [values.yaml])
+  securityContext: {}
+  #  runAsUser: 999
+  #  runAsGroup: 999
+  #  fsGroup: 999
+
+  # Deployment strategy for the all deployed Deployments
+  deploymentStrategy: {}
+    # type: RollingUpdate
+    # rollingUpdate:
+    #   maxSurge: 25%
+    #   maxUnavailable: 25%
+
+###############################################################################
+##                                  BLockchain App                           ##
+###############################################################################
+blockchain:
+  # Enable blockchain StatefulSet
+  enabled: false
+  # Blockchain app name string
+  name: blockchain
+  
+  # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
+  replicaCount: 1
+
+   # Maximum number of controller revisions that will be maintained in StatefulSet history
+  revisionHistoryLimit: 5
+
+  # Automount API credentials for the Service Account into the pod.
+  automountServiceAccountToken: true
+
+  # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
+  image:
+    repository: blockchain
+    # This sets the pull policy for images.
+    pullPolicy: Never
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "2.1.0"
+  
+    # This is for the secretes for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  imagePullSecrets: []
+
+  # Annotations for the application controller StatefulSet
+  statefulsetAnnotations: {}
+
+  # Annotations to be added to application controller pods
+  podAnnotations: {}
+
+  # Labels to be added to application controller pods
+  podLabels: {}
+
+  params:
+    useCoreMarkets: "true"
+    useRaydiumMarkets: "false"
+    useUniswapV3BaseMarkets: "false"
+    useCoinGeckoMarkets: "false"
+    useOsmosisMarkets: "false"
+  
+  configTomlSettings:
+    instrumentation:
+      enabled: true
+      maxOpenConnections: 3
+      namespace: "cometbft"
+      prometheus: true
+      prometheusListenAddr: "0.0.0.0:26660"
+
+
+  # Extra Environment variables to pass to StatefulSet
+  extraEnvVars:
+    # non-sensitive variables
+    normal: {}
+    # sensitive variables
+    secret: {}
+
+  # Blockchain pod-level security context
+  # @default -- See [values.yaml]
+  securityContext: {}
+  #  runAsNonRoot: true
+  #  runAsUser: 999
+  #  seccompProfile:
+  #    type: RuntimeDefault
+
+  # Application container-level security context
+  # @default -- See [values.yaml]
+  containerSecurityContext: {}
+   # runAsNonRoot: true
+   # readOnlyRootFilesystem: true
+   # allowPrivilegeEscalation: false
+   # seccompProfile:
+   #   type: RuntimeDefault
+   # capabilities:
+   #   drop:
+   #   - ALL
+
+  serviceAccount:
+    # Create a service account for the application controller
+    create: true
+    # Service account name
+    name: blockchain
+    # Annotations applied to created service account
+    annotations: {}
+    # Labels applied to created service account
+    labels: {}
+    # Automount API credentials for the Service Account
+    automountServiceAccountToken: true
+  
+  ## Application controller metrics configuration
+  metrics:
+    # Deploy chain side metrics service
+    enabled: false
+    # Prometheus ServiceMonitor scrapeTimeout. If empty, Prometheus uses the global scrape timeout unless it is less than the target's scrape interval value in which the latter is used.
+    scrapeTimeout: ""
+    applicationLabels:
+      # Enables additional labels in metric
+      enabled: false
+      # Additional labels
+      labels: []
+    service:
+      # Chain side metrics service type
+      type: ClusterIP
+      # Chain side metrics service clusterIP. `None` makes a "headless service" (no virtual IP)
+      clusterIP: ""
+      # Chain side metrics service annotations
+      annotations: {}
+      # Chain side metrics service labels
+      labels: {}
+      # Chain side metrics service port
+      servicePort: 26660
+      # Chain side metrics service port name
+      portName: chain-metrics
+  
+  # Additional volumes on the output Deployment definition.
+  extraVolumes: []
+  # - name: foo
+  #   secret:
+  #     secretName: mysecret
+  #     optional: false
+
+  # Additional volumeMounts on the output Deployment definition.
+  extraVolumeMounts: []
+  # - name: foo
+  #   mountPath: "/etc/foo"
+  #   readOnly: true
+
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+###############################################################################
+##                                  Connect Sidecar App                      ##
+###############################################################################
+connect:
+  # Connect oracle name string
+  name: sidecar
+
+  # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
+  replicaCount: 1
+
+  # Automount API credentials for the Service Account into the pod.
+  automountServiceAccountToken: true
+
+  # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
+  image:
+    repository: connect
+    # This sets the pull policy for images.
+    pullPolicy: Never
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "2.1.0"
+
+  # This is for the secretes for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  imagePullSecrets: []
+
+  # Extra Environment variables to pass to Deployment
+  extraEnvVars:
+    # non-sensitive variables
+    normal: {}
+    # sensitive variables
+    secret: {}
+
+  # Oracle sidecar configurations
+  # Ref: https://docs.skip.build/connect/validators/configuration#flags
+  settings:
+    # MarketMap provider to use (marketmap_api, dydx_api, dydx_migration_api). (default "marketmap_api")
+    # Allowed values: 'marketmap_api' | 'dydx_api' | 'osmosis_api'
+    marketMapProvider: dydx_api
+    # Overrides part of the Oracle configuration 
+    # This does not override the entire configuration, only the part of the configuration specified in the json file passed in
+    # @default -- '/etc/config/oracle.json'
+    oracleConfig: "/etc/config/oracle.json"
+    # Run pprof server
+    runPprof: true
+    # Port for the pprof server to listen on
+    pprofPort: 6060
+    # Log level (debug, info, warn, error, dpanic, panic, fatal)
+    logStdOutLevel: "info"
+    # Log level for the file logger (debug, info, warn, error, dpanic, panic, fatal)
+    logFileLevel: "info"
+    # Write logs to a file.
+    logFile: "sidecar.log"
+    # Maximum size in megabytes before log is rotated
+    logMaxSize: 100
+    # Maximum number of old log files to retain
+    logMaxBackups: 1 
+    # Maximum number of days to retain an old log file
+    logMaxAge: 3
+    # Compress rotated log files
+    logFileDisableCompression: false
+    # Disable writing logs to a file
+    logDisableFileRotation: false
+    # Enables the Oracle client metrics
+    metricsEnabled: true
+    # Sets the Prometheus server address for the Oracle client metrics
+    metricsPrometheusAddress: "0.0.0.0:8002"
+    # Select the mode to run the oracle in.  Default is "exec" which will fetch prices as configured.
+    # "validate" mode will run the oracle for a set period of time to validate the configuration.
+    mode: "exec"
+    # The address the Oracle will serve from
+    host: "0.0.0.0"
+    # The port the Oracle will serve from
+    port: 8080
+    # The interval at which the oracle will fetch prices from providers
+    updateInterval: "250000000"
+    # Maximum age of a price that the oracle will consider valid (default 2m0s)
+    maxPriceAge: "2m0s"
+
+  # This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
+  serviceAccount:
+    # Specifies whether a service account should be created
+    create: true
+    # Automatically mount a ServiceAccount's API credentials?
+    automountServiceAccountToken: true
+    # Annotations to add to the service account
+    annotations: {}
+    # Labels applied to created service account
+    labels: {}
+    # The name of the service account to use.
+    # If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+  # Deployment strategy for the Connect app Deployment
+  deploymentStrategy: {}
+    # type: RollingUpdate
+    # rollingUpdate:
+    #   maxSurge: 25%
+    #   maxUnavailable: 25%
+
+  # Annotations to be added to Connect app Deployment
+  deploymentAnnotations: {}
+
+  # This is for setting Kubernetes Annotations to a Pod.
+  # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+  podAnnotations: {}
+  # This is for setting Kubernetes Labels to a Pod.
+  # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+  podLabels: {}
+
+  podSecurityContext: {}
+    # fsGroup: 2000
+
+  securityContext: {}
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+    # runAsNonRoot: true
+    # runAsUser: 1000
+
+  # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+  service:
+    # Service annotations
+    annotations: {}
+    # Service labels
+    labels: {}
+    # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+    type: ClusterIP
+    # Service http port for NodePort service type (only if `service.type` is set to "NodePort")
+    nodePortHttp: 30080
+    # Service http port name
+    portHttpName: http
+    # Service http port
+    http: 8080
+    portPprofName: pprof
+    # Service pprof port
+    pprof: 6060
+    # The class of the load balancer implementation
+    loadBalancerClass: ""
+    # LoadBalancer will get created with the IP specified in this field
+    loadBalancerIP: ""
+    # Source IP ranges to allow access to service from
+    ## Ref: https://kubernetes.io/docs/tasks/access-application-cluster/configure-cloud-provider-firewall/#restrict-access-for-loadbalancer-service
+    loadBalancerSourceRanges: []
+    # Service external IPs
+    externalIPs: []
+    # Denotes if this Service desires to route external traffic to node-local or cluster-wide endpoints
+    ## Ref: https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
+    externalTrafficPolicy: Cluster
+    # Used to maintain session affinity. Supports `ClientIP` and `None`
+    ## Ref: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies
+    sessionAffinity: None
+
+  ## Application metrics configuration
+  metrics:
+    service:
+      # Metrics service type
+      type: ClusterIP
+      # Metrics service clusterIP. `None` makes a "headless service" (no virtual IP)
+      clusterIP: ""
+      # Metrics service annotations
+      annotations: {}
+      # Metrics service labels
+      labels: {}
+      # Metrics service port name
+      portName: http-metrics
+
+  # This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
+  ingress:
+    # Enable an ingress resource for the Connect app 
+    enabled: false
+    # Additional ingress annotations for the Connect app 
+    annotations: {}
+    # Additional ingress labels for the Connect app 
+    labels: {}
+    # Defines which ingress controller will implement the resource 
+    ingressClassName: ""
+    # Connect hostname for the Connect app 
+    hostname: ""
+    # Connect ingress path for the Connect app 
+    path: /
+    # Ingress path type for the Connect app. One of `Exact`, `Prefix` or `ImplementationSpecific`
+    pathType: Prefix
+    # Enable TLS configuration for the hostname defined at `server.ingress.hostname`
+    ## TLS certificate will be retrieved from a TLS secret with name: `connect-tls`
+    tls: false
+    # The list of additional hostnames to be covered by ingress record
+    # @default -- `[]` (See [values.yaml])
+    extraHosts: []
+      # - name: connect.example.com
+      #   path: /
+
+    # Additional ingress paths for the Connect app 
+    # @default -- `[]` (See [values.yaml])
+    ## Note: Supports use of custom Helm templates
+    extraPaths: []
+      # - path: /*
+      #   pathType: Prefix
+      #   backend:
+      #     service:
+      #       name: ssl-redirect
+      #       port:
+      #         name: use-annotation
+
+    # Additional ingress rules
+    # @default -- `[]` (See [values.yaml])
+    ## Note: Supports use of custom Helm templates
+    extraRules: []
+      # - http:
+      #     paths:
+      #     - path: /
+      #       pathType: Prefix
+      #       backend:
+      #         service:
+      #           name: '{{ include "chart.connect.fullname" . }}'
+      #           port:
+      #             name: '{{ .Values.connect.service.servicePortHttpName }}'
+
+    # Additional TLS configuration for dedicated 
+    # @default -- `[]` (See [values.yaml])
+    extraTls: []
+      # - secretName: your-certificate-name
+      #   hosts:
+      #     - connect.app.example.com
+
+  resources:
+    # We usually recommend not to specify default resources and to leave this as a conscious
+    # choice for the user. This also increases chances charts run on environments with little
+    # resources, such as Minikube. If you do want to specify resources, uncomment the following
+    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    limits:
+      cpu: 1
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  # This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+  livenessProbe:
+    enabled: true
+    # @default -- `/connect/oracle/v2/prices`
+    path: ""
+    initialDelaySeconds: 15
+    periodSeconds: 6
+    timeoutSeconds: 2
+    failureThreshold: 3
+    successThreshold: 1
+  readinessProbe:
+    enabled: true
+    # @default -- `/connect/oracle/v2/prices`
+    path: ""
+    initialDelaySeconds: 15
+    periodSeconds: 6
+    timeoutSeconds: 2
+    failureThreshold: 3
+    successThreshold: 1
+
+  # This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+
+  # Additional volumes on the output Deployment definition.
+  volumes: []
+  # - name: foo
+  #   secret:
+  #     secretName: mysecret
+  #     optional: false
+
+  # Additional volumeMounts on the output Deployment definition.
+  volumeMounts: []
+  # - name: foo
+  #   mountPath: "/etc/foo"
+  #   readOnly: true
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}

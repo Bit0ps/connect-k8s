@@ -1,0 +1,36 @@
+{{- $metricsAddress := .Values.connect.settings.metricsPrometheusAddress }}
+{{- $metricsPort := regexFind "[0-9]+$" $metricsAddress }}
+{{- if .Values.connect.settings.metricsEnabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "chart.connect.fullname" . }}-metrics
+  namespace: {{ include  "chart.namespace" . }}
+  labels:
+    {{- include "chart.labels" (dict "context" . "component" .Values.connect.name "name" .Values.connect.name) | nindent 4 }}
+    {{- with .Values.connect.metrics.service.labels }}
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- if or .Values.connect.metrics.service.annotations .Values.global.addPrometheusAnnotations }}
+  annotations:
+    {{- if .Values.global.addPrometheusAnnotations }}
+    prometheus.io/port: {{ $metricsPort | default "8002" | quote }}
+    prometheus.io/scrape: "true"
+    {{- end }}
+    {{- range $key, $value := .Values.connect.metrics.service.annotations }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+spec:
+  type: {{ .Values.connect.metrics.service.type }}
+  {{- if and .Values.connect.metrics.service.clusterIP (eq .Values.connect.metrics.service.type "ClusterIP") }}
+  clusterIP: {{ .Values.connect.metrics.service.clusterIP }}
+  {{- end }}
+  ports:
+  - name:  {{ .Values.connect.metrics.service.portName }}
+    protocol: TCP
+    port: {{ $metricsPort | default "8002" }}
+    targetPort: http-metrics
+  selector:
+    {{- include "chart.selectorLabels" (dict "context" . "name" .Values.connect.name) | nindent 4 }}
+{{- end }}

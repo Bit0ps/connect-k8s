@@ -1,0 +1,135 @@
+{{- $metricsAddress := .Values.blockchain.configTomlSettings.instrumentation.prometheusListenAddr }}
+{{- $metricsPort := regexReplaceAll ".*:(\\d+)" $metricsAddress "$1" }}
+{{- if .Values.blockchain.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  {{- with (mergeOverwrite (deepCopy .Values.global.statefulsetAnnotations) .Values.blockchain.statefulsetAnnotations) }}
+  annotations:
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+  name: {{ template "chart.blockchain.fullname" . }}
+  namespace: {{ include "chart.namespace" . }}
+  labels:
+    {{- include "chart.labels" (dict "context" . "component" .Values.blockchain.name "name" .Values.blockchain.name) | nindent 4 }}
+spec:
+  serviceName: {{ include "chart.blockchain.fullname" . }}-headless
+  replicas: {{ .Values.blockchain.replicaCount }}
+  revisionHistoryLimit: {{ .Values.blockchain.revisionHistoryLimit | default .Values.global.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" (dict "context" . "name" .Values.blockchain.name) | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        rollme: {{ randAlphaNum 5 | quote }}
+        {{- with (mergeOverwrite (deepCopy .Values.global.podAnnotations) .Values.blockchain.podAnnotations) }}
+        {{- range $key, $value := . }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+      labels:
+        {{- include "chart.labels" (dict "context" . "component" .Values.blockchain.name "name" .Values.blockchain.name) | nindent 8 }}
+        {{- with (mergeOverwrite (deepCopy .Values.global.podLabels) .Values.blockchain.podLabels) }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.blockchain.imagePullSecrets | default .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "chart.blockchain.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.blockchain.automountServiceAccountToken }}
+      securityContext:
+        {{- toYaml .Values.blockchain.securityContext | nindent 8 }}
+      containers:
+        - name: {{ .Values.blockchain.name }}
+          image: {{ default .Values.global.image.repository .Values.blockchain.image.repository }}:{{ default (include "chart.defaultTag" .) .Values.blockchain.image.tag }}
+          imagePullPolicy: {{ default .Values.global.image.imagePullPolicy .Values.blockchain.image.pullPolicy }}
+          env:
+            - name: USE_CORE_MARKETS
+              value: {{ .Values.blockchain.params.useCoreMarkets | default "true" | quote }}
+            - name: USE_RAYDIUM_MARKETS
+              value: {{ .Values.blockchain.params.useRaydiumMarkets | default "false" | quote }}
+            - name: USE_UNISWAPV3_BASE_MARKETS
+              value: {{ .Values.blockchain.params.useUniswapV3BaseMarkets | default "false" | quote }}
+            - name: USE_COINGECKO_MARKETS
+              value: {{ .Values.blockchain.params.useCoinGeckoMarkets | default "false" | quote }}
+            - name: USE_OSMOSIS_MARKETS
+              value: {{ .Values.blockchain.params.useOsmosisMarkets | default "false" | quote }}
+          {{- if or (.Values.blockchain.extraEnvVars.normal) (.Values.blockchain.extraEnvVars.secret) }}
+            {{- include "chart.blockchain.listEnvVars" . | indent 12 }}
+          {{- end }}
+          ports:
+            - name: p2p
+              containerPort: 26656
+              protocol: TCP
+            - name: rpc
+              containerPort: 26657
+              protocol: TCP
+            - name: api
+              containerPort: 1317
+              protocol: TCP
+            - name: grpc
+              containerPort: 9090
+              protocol: TCP
+            - name: grpc-web
+              containerPort: 7171
+              protocol: TCP
+            - name: abci
+              containerPort: 26655
+              protocol: TCP
+          {{- if eq .Values.blockchain.settings.metricsEnabled "true" }}
+            - name: metrics
+              containerPort: {{ $metricsPort }}
+              protocol: TCP
+          {{- end }}
+          resources:
+            {{- toYaml .Values.blockchain.resources | nindent 12 }}
+          {{- with .Values.blockchain.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 10 }}
+          {{- end }}
+          volumeMounts:
+            - name: config-toml-volume
+              mountPath: /src/connect/tests/.connectd/config
+              subPath: config.toml
+            - name: blockchain-data
+              mountPath: /data/blockchain
+          {{- with .Values.blockchain.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: config-toml-volume
+          configMap:
+          name: config-toml
+      {{- with .Values.blockchain.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.blockchain.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.blockchain.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.blockchain.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  volumeClaimTemplates:
+    - metadata:
+        name: blockchain-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: {{ .Values.blockchain.storage.size | default "10Gi" }}
+{{- end }}
