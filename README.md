@@ -151,31 +151,31 @@ Each target automates specific aspects of the Kubernetes deployment workflow:
 
 1. Dependency and Environment Checks
 
-	•	`check-k8s-deps`: Verifies that all required dependencies (Minikube, kubectl, Helm, Docker) are installed.
-	•	`check-env-var`: Checks if the environment variable `PREVIEW_VERSION` is set. If not, the process is halted with an error.
+	-	`check-k8s-deps`: Verifies that all required dependencies (Minikube, kubectl, Helm, Docker) are installed.
+	-	`check-env-var`: Checks if the environment variable `PREVIEW_VERSION` is set. If not, the process is halted with an error.
 
 2. Minikube Management
 
-	•	`run-minikube`: Starts Minikube if it’s not already running. Ensures Minikube is operational before proceeding.
+	-	`run-minikube`: Starts Minikube if it’s not already running. Ensures Minikube is operational before proceeding.
 
 3. Building Docker Images
 
-	•	`build-k8s-preview`: Builds Docker images for Kubernetes preview in Minikube’s Docker environment. It uses the `K8S_PREVIEW_DOCKERFILE` and tags images with the provided `SEMVER` version and `PROJECT_NAME`.
+	-	`build-k8s-preview`: Builds Docker images for Kubernetes preview in Minikube’s Docker environment. It uses the `K8S_PREVIEW_DOCKERFILE` and tags images with the provided `SEMVER` version and `PROJECT_NAME`.
 
 4. Helm Chart Deployment
 
-	•	`deploy-k8s-preview`: Deploys the Helm chart to a specified namespace `(K8S_NAMESPACE)`. If the namespace doesn’t exist, it’s created. Tags and versions are set using the `SEMVER` variable.
+	-	`deploy-k8s-preview`: Deploys the Helm chart to a specified namespace `(K8S_NAMESPACE)`. If the namespace doesn’t exist, it’s created. Tags and versions are set using the `SEMVER` variable.
 
 5. All Components Deployment
 
-	•	`run-all-k8s-preview`: A combined target that checks dependencies, runs Minikube, builds Docker images, and deploys the Helm chart.
+	-	`run-all-k8s-preview`: A combined target that checks dependencies, runs Minikube, builds Docker images, and deploys the Helm chart.
 
 6. Cleanup Targets
 
-	•	`delete-all-preview-charts`: Uninstalls the Helm release for the project across all namespaces matching a pattern based on the project name.
-	•	`delete-all-preview-ns`: Deletes namespaces matching the pattern.
-	•	`minikube-prune`: Runs a docker system prune in Minikube to free up space by removing unused resources.
-	•	`clean-all-preview`: A comprehensive cleanup that checks dependencies, uninstalls Helm releases, deletes namespaces, and prunes Docker resources in Minikube.
+	-	`delete-all-preview-charts`: Uninstalls the Helm release for the project across all namespaces matching a pattern based on the project name.
+	-	`delete-all-preview-ns`: Deletes namespaces matching the pattern.
+	-	`minikube-prune`: Runs a docker system prune in Minikube to free up space by removing unused resources.
+	-	`clean-all-preview`: A comprehensive cleanup that checks dependencies, uninstalls Helm releases, deletes namespaces, and prunes Docker resources in Minikube.
 
 
 ### Usage
