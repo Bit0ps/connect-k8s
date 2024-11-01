@@ -193,7 +193,7 @@ make clean-all-preview                    # Full preview cleanup
 > **_NOTE:_** </br>
 By default, the `container port` and `service port` are set to `8080`.
 
-1. Find our required information by exporting environment variables:
+1. Find out the required information by exporting environment variables:
 ```bash
 export VERSION_PATTERN=${PREVIEW_VERSION//./-}
 export NS_NAME=$(kubectl get ns -o custom-columns=:metadata.name | grep "v${VERSION_PATTERN}")
