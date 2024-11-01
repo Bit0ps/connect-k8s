@@ -258,6 +258,7 @@ connect:
     # Enables the Oracle client metrics
     metricsEnabled: false
     # Sets the Prometheus server address for the Oracle client metrics
+    # # NOTE! By updating the port container port && metrics service ports are updated accordingly.
     metricsPrometheusAddress: "0.0.0.0:8002"
     # Select the mode to run the oracle in.  Default is "exec" which will fetch prices as configured.
     # "validate" mode will run the oracle for a set period of time to validate the configuration.
@@ -265,6 +266,7 @@ connect:
     # The address the Oracle will serve from
     host: "0.0.0.0"
     # The port the Oracle will serve from
+    # NOTE! By updating the port container port is updated accordingly.
     port: 8080
     # The interval at which the oracle will fetch prices from providers
     updateInterval: "250000000"

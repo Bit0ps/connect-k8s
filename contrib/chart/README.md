@@ -94,10 +94,10 @@ helm upgrade --install connect connect-k8s/contrib/chart
 | `connect.settings.logMaxBackups`            | int     | `1`                       | Max log backups                            |
 | `connect.settings.logMaxAge`                | int     | `3`                       | Log retention (days)                       |
 | `connect.settings.metricsEnabled`           | bool    | `true`                    | Enable Oracle client metrics               |
-| `connect.settings.metricsPrometheusAddress` | string  | `0.0.0.0:8002`            | Prometheus server address                  |
+| `connect.settings.metricsPrometheusAddress` | string  | `0.0.0.0:8002`            | Prometheus server address and port.        |
 | `connect.settings.mode`                     | string  | `exec`                    | Oracle run mode                            |
 | `connect.settings.host`                     | string  | `0.0.0.0`                 | Oracle host address                        |
-| `connect.settings.port`                     | int     | `8080`                    | Oracle port                                |
+| `connect.settings.port`                     | int     | `8080`                    | Oracle && Container port                   |
 | `connect.serviceAccount.create`             | bool    | `true`                    | Create service account                     |
 | `connect.serviceAccount.automountServiceAccountToken` | bool | `true`          | Automount service account token            |
 | `connect.serviceAccount.annotations`        | object  | `{}`                      | Annotations for the service account        |
