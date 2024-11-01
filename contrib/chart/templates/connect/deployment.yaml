@@ -141,7 +141,7 @@ spec:
             {{- else }}
               path: {{ .Values.connect.livenessProbe.path | default "/connect/oracle/v2/prices" }}
             {{- end }}
-              port: oracle
+              port: http
             initialDelaySeconds: {{ .Values.connect.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.connect.livenessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.connect.livenessProbe.timeoutSeconds }}
@@ -156,7 +156,7 @@ spec:
             {{- else }}
               path: {{ .Values.connect.livenessProbe.path | default "/connect/oracle/v2/prices" }}
             {{- end }}
-              port: oracle
+              port: http
             initialDelaySeconds: {{ .Values.connect.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.connect.readinessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.connect.readinessProbe.timeoutSeconds }}
@@ -166,15 +166,24 @@ spec:
           resources:
             {{- toYaml .Values.connect.resources | nindent 12 }}
           volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          {{- if .Values.connect.settings.oracleConfig }}
             - name: oracle-json
               mountPath: /etc/config
+          {{- end }}
           {{- with .Values.connect.volumeMounts }}
             {{- toYaml . | nindent 12 }}
           {{- end }}
       volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: {{ .Values.connect.emptyDir.sizeLimit }}
+      {{- if .Values.connect.settings.oracleConfig }}
         - name: oracle-json
           configMap:
             name: oracle-json
+      {{- end }}
       {{- with .Values.connect.volumes }}
         {{- toYaml . | nindent 8 }}
       {{- end }}

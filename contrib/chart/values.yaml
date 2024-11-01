@@ -233,7 +233,8 @@ connect:
     # Overrides part of the Oracle configuration 
     # This does not override the entire configuration, only the part of the configuration specified in the json file passed in
     # @default -- '/etc/config/oracle.json'
-    oracleConfig: "/etc/config/oracle.json"
+    # NOTE! The configuration is not provisioned if the oracleConfig value is set to an empty string ("")
+    oracleConfig: ""
     # Run pprof server
     runPprof: true
     # Port for the pprof server to listen on
@@ -255,7 +256,7 @@ connect:
     # Disable writing logs to a file
     logDisableFileRotation: false
     # Enables the Oracle client metrics
-    metricsEnabled: true
+    metricsEnabled: false
     # Sets the Prometheus server address for the Oracle client metrics
     metricsPrometheusAddress: "0.0.0.0:8002"
     # Select the mode to run the oracle in.  Default is "exec" which will fetch prices as configured.
@@ -469,6 +470,11 @@ connect:
   # - name: foo
   #   mountPath: "/etc/foo"
   #   readOnly: true
+  
+  ## Connect sidecar emptyDir volume
+  emptyDir:
+    # EmptyDir size limit for Connect sidecar
+    sizeLimit: "1Gi"
 
   nodeSelector: {}
 

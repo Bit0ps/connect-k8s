@@ -152,7 +152,6 @@ run-minikube:
 
 # Build k8s Preview Docker Image
 build-k8s-preview:
-	check-env-var
 	@echo "Building Docker image in Minikube's Docker environment..."
 	@minikube status > /dev/null 2>&1 || (echo "Error: Minikube is not running." && exit 1)
 	@eval $$(minikube docker-env) && \
@@ -167,7 +166,6 @@ build-k8s-preview:
 
 # Deploy k8s Preview Helm Chart
 deploy-k8s-preview:
-	check-env-var
 	@echo "Deploying Helm chart..."
 	@if ! kubectl get namespace "$(K8S_NAMESPACE)" > /dev/null 2>&1; then \
 		echo "Namespace $(K8S_NAMESPACE) does not exist. Creating it..."; \
@@ -186,10 +184,10 @@ deploy-k8s-preview:
 	@echo "Helm chart deployed successfully to namespace $(K8S_NAMESPACE) with appVersion and image.tag set to $(SEMVER)"
 
 # Main target: Build k8s Docker image and deploy helm chart using minikube
-run-all-k8s-preview: check-k8s-deps run-minikube build-k8s-preview deploy-k8s-preview
+run-all-k8s-preview: check-k8s-deps check-env-var run-minikube build-k8s-preview deploy-k8s-preview
 	@echo "Preview k8s deployment has been completed"
 
-.PHONY: check-k8s-deps run-minikube build-k8s-preview deploy-k8s-preview run-all-k8s-preview
+.PHONY: check-k8s-deps check-env-var run-minikube build-k8s-preview deploy-k8s-preview run-all-k8s-preview
 
 # Command to check if helm release exists in a namespace
 define HELM_RELEASE_EXISTS

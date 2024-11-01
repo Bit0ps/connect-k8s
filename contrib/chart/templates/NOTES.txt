@@ -1,0 +1,14 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your release "{{ .Release.Name }}" has been successfully deployed in the "{{ .Release.Namespace }}" namespace.
+
+To access Connect Sidecar app via port forwarding, follow these steps:
+
+1. Start port forwarding by running the following command:
+   kubectl port-forward svc/{{ include "chart.connect.fullname" . }} {{ .Values.connect.service.http }}:{{ .Values.connect.settings.port }} --namespace {{ .Release.Namespace }}
+
+2.	Open your browser and go to:
+   http://localhost:{{ .Values.connect.service.http }}
+
+
+Happy Helming!
