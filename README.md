@@ -84,6 +84,9 @@ $ make stop-all-dev
 ## Kubernetes Preview Environments
 
 ### Prerequisites
+> **_NOTE:_** </br>
+Kubernetes Preview Environment is not compartible with WINDOWS!!!
+
 Ensure the following tools are installed and accessible in your PATH:
 
 Install minikube</br></br>
@@ -183,6 +186,31 @@ Each target automates specific aspects of the Kubernetes deployment workflow:
 export PREVIEW_VERSION=<connect version>  # Ex: PREVIEW_VERSION=2.1.0
 make run-all-k8s-preview                  # Full preview deployment
 make clean-all-preview                    # Full preview cleanup
+```
+
+### Access application via port forwarding
+
+> **_NOTE:_** </br>
+By default, the `container port` and `service port` are set to `8080`.
+
+1. Find our required information by exporting environment variables:
+```bash
+export VERSION_PATTERN=${PREVIEW_VERSION//./-}
+export NS_NAME=$(kubectl get ns -o custom-columns=:metadata.name | grep "v${VERSION_PATTERN}")
+export SVC_NAME=$(kubectl get svc -o jsonpath='{.items[0].metadata.name}' -n $NS_NAME)
+export POD_NAME=$(kubectl get pods -n $NS_NAME -o jsonpath='{.items[*].metadata.name}')
+export CONTAINER_PORT=$(kubectl get pod $POD_NAME -n $NS_NAME -o jsonpath='{.spec.containers[0].ports[0].containerPort}')
+```
+
+2. Start port forwarding by running the following command:
+```bash
+kubectl port-forward svc/$SVC_NAME 8080:$CONTAINER_PORT -n $NS_NAME
+``` 
+
+### Troubleshooting
+If you encounter `a not enough space` error while frequently deploying preview environments, run the following command to prune resources from Minikube’s local storage:
+```bash
+make minikube-prune
 ```
 
 ## Metrics

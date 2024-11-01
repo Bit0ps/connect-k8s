@@ -165,6 +165,7 @@ helm upgrade --install connect connect-k8s/contrib/chart
 | `connect.autoscaling.targetMemoryUtilizationPercentage` | int | `80`        | Target memory utilization percentage       |
 | `connect.volumes`                           | list    | `[]`                      | Additional volumes for the deployment      |
 | `connect.volumeMounts`                      | list    | `[]`                      | Additional volume mounts for the deployment|
+| `connect.emptyDir.sizeLimit`                | string  | `"1Gi"`                   | EmptyDir size limit                        |
 | `connect.nodeSelector`                      | object  | `{}`                      | Node selector for pod assignment           |
 | `connect.tolerations`                       | list    | `[]`                      | Tolerations for pod assignment             |
 | `connect.affinity`                          | object  | `{}`                      | Affinity settings for pod assignment       |
